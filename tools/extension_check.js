@@ -1,6 +1,8 @@
 'use strict';
 
 const Module = require('module');
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const results = [];
@@ -24,6 +26,7 @@ const configValues = {
   modelPrefixes: ['deepseek'],
   currency: 'CNY',
   rateOverrides: {},
+  holidays: [],
   refreshIntervalSeconds: 30,
   includeSubagents: true,
   showStatusBar: true
@@ -162,9 +165,21 @@ function fakeWebviewView() {
 }
 
 (async () => {
+  // 账本写在临时目录里，不污染真实扩展存储，也不要在自检里碰用户数据。
+  const storageDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsm-check-'));
+  const globalStateMap = new Map();
   const context = {
     subscriptions: [],
-    extensionUri: { fsPath: 'D:\\vscode-ext\\deepseek-cost-monitor', scheme: 'file', path: 'D:\\vscode-ext\\deepseek-cost-monitor' }
+    extensionUri: { fsPath: 'D:\\vscode-ext\\deepseek-cost-monitor', scheme: 'file', path: 'D:\\vscode-ext\\deepseek-cost-monitor' },
+    globalStorageUri: { fsPath: storageDir, scheme: 'file', path: storageDir },
+    globalState: {
+      get: key => globalStateMap.get(key),
+      update: (key, value) => {
+        globalStateMap.set(key, value);
+        return Promise.resolve();
+      },
+      keys: () => Array.from(globalStateMap.keys())
+    }
   };
   extension.activate(context);
 
@@ -175,7 +190,12 @@ function fakeWebviewView() {
   check('状态栏 tooltip', Boolean(statusItem.tooltip && String(statusItem.tooltip.value).includes('非官方账单')), statusItem.tooltip ? statusItem.tooltip.value.slice(0, 80) : null);
   check('状态栏点击命令', statusItem.command === 'deepseekCostMonitor.focus', statusItem.command);
   check('文件监听已建立', watchedPatterns.length === 1 && watchedPatterns[0].pattern === '**/*.jsonl', watchedPatterns.map(item => item.pattern));
-  check('命令已注册', commands.has('deepseekCostMonitor.refresh') && commands.has('deepseekCostMonitor.focus') && commands.has('deepseekCostMonitor.showDiagnostics'), Array.from(commands.keys()));
+  check(
+    '命令已注册',
+    ['refresh', 'focus', 'showDiagnostics', 'rebuildLedger', 'clearLedger']
+      .every(name => commands.has('deepseekCostMonitor.' + name)),
+    Array.from(commands.keys())
+  );
   check('激活无启动错误', !outputLines.some(line => line.includes('启动失败') || line.includes('回调异常')), outputLines);
 
   const provider = webviewProviders.get('deepseekCostMonitor.today');
@@ -189,6 +209,10 @@ function fakeWebviewView() {
   check('Webview 无远程资源', !/https?:\/\//.test(html), null);
   check('Webview 引入本地样式与脚本', html.includes('vscode-webview://stub/') && html.includes('media/main.js') && html.includes('media/style.css'), null);
   check('Webview 初始占位', html.includes('正在计算'), null);
+  check('Webview 含今日/历史标签', html.includes('id="tabToday"') && html.includes('id="tabHistory"') && html.includes('id="historyPane"'), null);
+  check('Webview 含自定义范围与季/年粒度', html.includes('id="customFrom"') && html.includes('data-granularity="quarter"') && html.includes('data-granularity="year"'), null);
+  check('Webview 含波动图与热力图容器', html.includes('id="trendChart"') && html.includes('id="heatmap"') && html.includes('id="heatYear"'), null);
+  check('Webview 含保留期提示条', html.includes('id="retentionBanner"'), null);
 
   for (const handler of view.messageHandlers) handler({ type: 'ready' });
   await waitFor(() => view.posted.some(message => message.type === 'snapshot'), 5000, '快照推送');
@@ -240,11 +264,73 @@ function fakeWebviewView() {
     const payload = JSON.parse(selftestLine.slice('SELFTEST_JSON '.length));
     check('诊断含计价断言', Array.isArray(payload.pricingAssertions) && payload.pricingAssertions.every(item => item.ok), payload.pricingAssertions);
     check('诊断含快照', Boolean(payload.snapshot && payload.snapshot.totals.requests > 0), payload.snapshot ? payload.snapshot.totals.requests : null);
+    check('诊断含账本摘要', Boolean(payload.ledger && payload.ledger.days >= 1), payload.ledger);
   }
+
+  // ---- 历史账本（M2 接线） ----
+  const ledgerFile = path.join(storageDir, 'history-ledger.json');
+  check('账本文件已写入', fs.existsSync(ledgerFile), ledgerFile);
+  let ledgerRaw = null;
+  try {
+    ledgerRaw = fs.existsSync(ledgerFile) ? JSON.parse(fs.readFileSync(ledgerFile, 'utf8')) : null;
+  } catch {}
+  check('账本含日聚合', Boolean(ledgerRaw && Object.keys(ledgerRaw.days || {}).length > 0), ledgerRaw ? Object.keys(ledgerRaw.days).length : null);
+  // 账本只存 token：桶字段里出现金额字段就说明设计被破坏了（§6.3）。
+  const sampleDay = ledgerRaw ? Object.values(ledgerRaw.days || {})[0] : null;
+  const sampleModel = sampleDay ? Object.keys(sampleDay.models || {})[0] : null;
+  const sampleBucket = sampleModel ? sampleDay.models[sampleModel].main.peak : null;
+  check(
+    '账本桶仅有 token 字段',
+    Boolean(sampleBucket) && Object.keys(sampleBucket).sort().join(',') === 'cacheCreation,cacheHit,cacheMiss,output,requests',
+    sampleBucket ? Object.keys(sampleBucket).sort().join(',') : null
+  );
+  check(
+    '账本不含会话与路径（隐私白名单）',
+    Boolean(ledgerRaw) && JSON.stringify(ledgerRaw).indexOf('sessionId') === -1 && JSON.stringify(ledgerRaw).indexOf('cwd') === -1,
+    null
+  );
+  check(
+    '安装日已写入 globalState',
+    typeof globalStateMap.get('deepseekCostMonitor.installDate') === 'string',
+    globalStateMap.get('deepseekCostMonitor.installDate')
+  );
+
+  const historyBefore = view.posted.length;
+  for (const handler of view.messageHandlers) handler({ type: 'history', request: { preset: 'last30', granularity: 'auto' } });
+  await waitFor(() => view.posted.slice(historyBefore).some(message => message.type === 'history'), 10000, '历史查询');
+  const historyData = view.posted.filter(message => message.type === 'history').pop().data;
+  check('历史查询返回数据', Boolean(historyData && !historyData.empty), historyData ? { days: historyData.summary.daysWithData, total: historyData.summary.totalCost } : null);
+  check('历史粒度按范围自动选择', Boolean(historyData) && historyData.granularity === 'day', historyData ? historyData.granularity : null);
+  check('历史周期之和等于汇总', (() => {
+    if (!historyData) return false;
+    const sum = historyData.periods.reduce((acc, period) => acc + period.cost, 0);
+    return Math.abs(sum - historyData.summary.totalCost) < 1e-9;
+  })(), historyData ? { periods: historyData.periods.length } : null);
+
+  // FR-04 的硬验收：今日页 = 历史页的今天 = 状态栏，三者必须同口径。
+  const todayInHistory = historyData && historyData.days ? historyData.days.find(day => day.dateKey === todayKey) : null;
+  check(
+    '今日页与历史页今天金额一致',
+    Boolean(todayInHistory) && Math.abs(todayInHistory.cost - usdSnapshot.totals.cost) < 1e-9,
+    { todayPage: usdSnapshot.totals.cost, historyToday: todayInHistory ? todayInHistory.cost : null }
+  );
+
+  // 切到「今年」应回到周粒度，且不应出现未来周期。
+  const yearBefore = view.posted.length;
+  for (const handler of view.messageHandlers) handler({ type: 'history', request: { preset: 'thisYear', granularity: 'auto' } });
+  await waitFor(() => view.posted.slice(yearBefore).some(message => message.type === 'history'), 10000, '今年历史查询');
+  const yearData = view.posted.filter(message => message.type === 'history').pop().data;
+  check('今年按周聚合', Boolean(yearData) && yearData.granularity === 'week', yearData ? yearData.granularity : null);
+  check(
+    '未来周期不出现在明细里',
+    Boolean(yearData) && yearData.periods.every(period => period.fromKey <= todayKey),
+    yearData ? yearData.periods.slice(-3).map(period => period.key) : null
+  );
 
   for (const item of context.subscriptions.slice().reverse()) {
     try { if (item && typeof item.dispose === 'function') item.dispose(); } catch {}
   }
+  try { fs.rmSync(storageDir, { recursive: true, force: true }); } catch {}
   check('配置监听已清理', configHandlers.size === 0, configHandlers.size);
   check('无运行时错误输出', !outputLines.some(line => line.includes('刷新失败') || line.includes('回调异常')), outputLines);
 

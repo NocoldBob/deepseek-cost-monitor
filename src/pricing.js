@@ -1,16 +1,15 @@
 'use strict';
 
+const { HOLIDAY_YEARS, HOLIDAY_DAYS } = require('./holidays.data.js');
+
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 
-const DEFAULT_HOLIDAYS = [
-  '2026-01-01', '2026-01-02', '2026-01-03',
-  '2026-02-15', '2026-02-16', '2026-02-17', '2026-02-18', '2026-02-19', '2026-02-20', '2026-02-21', '2026-02-22', '2026-02-23',
-  '2026-04-04', '2026-04-05', '2026-04-06',
-  '2026-05-01', '2026-05-02', '2026-05-03', '2026-05-04', '2026-05-05',
-  '2026-06-19', '2026-06-20', '2026-06-21',
-  '2026-09-25', '2026-09-26', '2026-09-27',
-  '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07'
-];
+/**
+ * 内置法定节假日（2024–2027），由 tools/sync-holidays.mjs 从 holiday-cn 生成。
+ * 只含放假日期；调休上班日不参与计价——官方高峰口径是“周一至周五”，
+ * 补班周六仍按低谷（需求文档 §4.5）。
+ */
+const DEFAULT_HOLIDAYS = HOLIDAY_DAYS;
 
 const RATE_CARDS = {
   'deepseek-flash': {
@@ -64,6 +63,11 @@ function shanghaiParts(ms) {
 }
 
 function dateKeyOf(parts) {
+  return `${parts.year}-${pad2(parts.month)}-${pad2(parts.day)}`;
+}
+
+function dateKeyOfMs(ms) {
+  const parts = shanghaiParts(ms);
   return `${parts.year}-${pad2(parts.month)}-${pad2(parts.day)}`;
 }
 
@@ -123,14 +127,32 @@ function resolveRateInfo(model, settings) {
   return { normalized, currency, rates: RATE_CARDS[FALLBACK_MODEL][currency], estimated: true, custom: false };
 }
 
-function requestCost(record, rateInfo, holidays) {
-  const rates = rateInfo.rates;
-  const base = (
-    record.inputTokens * rates.cacheMiss +
-    record.cacheReadTokens * rates.cacheHit +
-    record.outputTokens * rates.output
+function tokenCost(inputTokens, cacheReadTokens, outputTokens, rates) {
+  return (
+    inputTokens * rates.cacheMiss +
+    cacheReadTokens * rates.cacheHit +
+    outputTokens * rates.output
   ) / 1000000;
+}
+
+function requestCost(record, rateInfo, holidays) {
+  const base = tokenCost(record.inputTokens, record.cacheReadTokens, record.outputTokens, rateInfo.rates);
   return isPeak(record.timestampMs, holidays) ? base : base * 0.5;
+}
+
+/**
+ * 账本里按“日 × 模型 × 主/子 × 峰谷”存的是 token 桶，不含时间戳，
+ * 因此峰谷已经由桶名表达，金额直接按桶名乘折扣，不再重复判断时间。
+ */
+function bucketCost(bucket, rateInfo, isPeakBucket) {
+  if (!bucket || !rateInfo || !rateInfo.rates) return 0;
+  const base = tokenCost(
+    Number(bucket.cacheMiss) || 0,
+    Number(bucket.cacheHit) || 0,
+    Number(bucket.output) || 0,
+    rateInfo.rates
+  );
+  return isPeakBucket ? base : base * 0.5;
 }
 
 function runPricingAssertions() {
@@ -157,15 +179,19 @@ function runPricingAssertions() {
 module.exports = {
   SHANGHAI_OFFSET_MS,
   DEFAULT_HOLIDAYS,
+  HOLIDAY_YEARS,
   RATE_CARDS,
   normalizeModel,
   isIncludedModel,
   parseTimestamp,
+  dateKeyOfMs,
   localDayInfo,
   isPeak,
   currentMarketMode,
   nextBoundaryMs,
   resolveRateInfo,
+  tokenCost,
   requestCost,
+  bucketCost,
   runPricingAssertions
 };

@@ -274,3 +274,393 @@ body {
   font-size: 10px;
   color: var(--vscode-descriptionForeground);
 }
+
+/* ---------- 标签页 ---------- */
+
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tab {
+  padding: 3px 9px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--vscode-foreground);
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.16));
+}
+
+.tab.is-active {
+  color: var(--vscode-foreground);
+  background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.14));
+  border-color: var(--vscode-widget-border, rgba(128, 128, 128, 0.3));
+  font-weight: 600;
+}
+
+.tab:focus-visible,
+.chip:focus-visible,
+.icon-btn:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: 1px;
+}
+
+/* ---------- 范围 / 粒度选择 ---------- */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chips-sm {
+  margin-top: -6px;
+}
+
+.chip {
+  padding: 2px 8px;
+  border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.3));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.6;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chip:hover {
+  color: var(--vscode-foreground);
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.16));
+}
+
+.chip.is-active {
+  color: var(--vscode-button-foreground, #ffffff);
+  background: var(--vscode-button-background, #0e639c);
+  border-color: var(--vscode-button-background, #0e639c);
+}
+
+/* ---------- 汇总卡片 ---------- */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
+  border: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.card {
+  min-width: 0;
+  padding: 7px 9px;
+  background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.08));
+}
+
+.card-label {
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-value {
+  margin-top: 1px;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-sub {
+  margin-top: 1px;
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- 环比 ---------- */
+
+.change {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--vscode-descriptionForeground);
+}
+
+.change.up {
+  color: var(--vscode-editorWarning-foreground, #cca700);
+}
+
+.change.down {
+  color: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.change.flat {
+  color: var(--vscode-descriptionForeground);
+}
+
+/* ---------- 自定义范围 ---------- */
+
+.custom-range {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.custom-range input[type="date"] {
+  flex: 1 1 105px;
+  min-width: 0;
+  padding: 3px 5px;
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.custom-range input[type="date"]:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+}
+
+.custom-sep {
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+}
+
+.custom-range .chip {
+  flex-shrink: 0;
+}
+
+/* ---------- 提示条 ---------- */
+
+.banner.info {
+  border-color: var(--vscode-focusBorder, #007acc);
+  background: rgba(0, 122, 204, 0.12);
+  color: var(--vscode-foreground);
+}
+
+.link-btn {
+  margin-left: 6px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--vscode-textLink-foreground, #3794ff);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+/* ---------- 波动图 ---------- */
+
+.chart-wrap {
+  min-height: 180px;
+}
+
+.chart-svg {
+  display: block;
+  width: 100%;
+  height: 180px;
+}
+
+.chart-grid {
+  stroke: var(--vscode-panel-border, rgba(128, 128, 128, 0.25));
+  stroke-width: 1;
+}
+
+.chart-axis {
+  fill: var(--vscode-descriptionForeground);
+  font-size: 10px;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--vscode-charts-blue, #3794ff);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-area {
+  fill: rgba(55, 148, 255, 0.14);
+  stroke: none;
+}
+
+.chart-dot {
+  fill: var(--vscode-charts-blue, #3794ff);
+  pointer-events: none;
+}
+
+.chart-hit {
+  fill: transparent;
+}
+
+.chart-hit:hover {
+  fill: rgba(128, 128, 128, 0.08);
+}
+
+/* ---------- 热力图 ---------- */
+
+.heatmap-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.heatmap-year {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.heatmap-year .icon-btn {
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  font-size: 13px;
+}
+
+.heatmap-year .icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.heatmap-wrap {
+  min-height: 96px;
+}
+
+.heatmap-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.heatmap-weekdays {
+  display: grid;
+  grid-template-rows: repeat(7, 10px);
+  gap: 2px;
+}
+
+.heatmap-weekdays span {
+  height: 10px;
+  line-height: 10px;
+  font-size: 8px;
+  color: var(--vscode-descriptionForeground);
+  text-align: right;
+}
+
+.heatmap-scroll {
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 10px);
+  grid-auto-columns: 10px;
+  gap: 2px;
+  width: max-content;
+}
+
+.heat-cell {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.12));
+}
+
+.heat-cell.blank {
+  background: transparent;
+}
+
+.heat-cell.future {
+  background: transparent;
+  border: 1px dashed var(--vscode-panel-border, rgba(128, 128, 128, 0.25));
+}
+
+.heat-cell.empty,
+.heat-swatch.empty {
+  background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.12));
+}
+
+.heat-cell.zero,
+.heat-swatch.zero {
+  background: var(--vscode-button-secondaryBackground, rgba(128, 128, 128, 0.35));
+}
+
+.heat-cell.heat-1,
+.heat-swatch.heat-1 {
+  background: rgba(55, 148, 255, 0.22);
+}
+
+.heat-cell.heat-2,
+.heat-swatch.heat-2 {
+  background: rgba(55, 148, 255, 0.4);
+}
+
+.heat-cell.heat-3,
+.heat-swatch.heat-3 {
+  background: rgba(55, 148, 255, 0.58);
+}
+
+.heat-cell.heat-4,
+.heat-swatch.heat-4 {
+  background: rgba(55, 148, 255, 0.76);
+}
+
+.heat-cell.heat-5,
+.heat-swatch.heat-5 {
+  background: rgba(55, 148, 255, 0.95);
+}
+
+.heat-cell.install {
+  outline: 1px solid var(--vscode-focusBorder, #007acc);
+  outline-offset: 1px;
+}
+
+.heat-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px;
+  font-size: 9px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.heat-swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+
+.heat-legend-sep {
+  width: 6px;
+}

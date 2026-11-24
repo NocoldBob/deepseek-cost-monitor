@@ -23,8 +23,14 @@ function normalizePrefixes(raw) {
   return Array.from(seen);
 }
 
+/**
+ * 节假日是**整体替换**语义：用户设置非空数组时完全替代内置表；
+ * 空数组或未设置表示“使用内置表”（2024–2027）。
+ * 这条必须与 package.json 的默认值 [] 保持一致，否则内置的多年度表会被
+ * 一个只含 2026 的默认值覆盖掉，回溯 2024/2025 时金额系统性偏高。
+ */
 function normalizeHolidays(raw) {
-  const source = Array.isArray(raw) ? raw : DEFAULT_HOLIDAYS;
+  const source = Array.isArray(raw) && raw.length ? raw : DEFAULT_HOLIDAYS;
   const out = [];
   for (const item of source) {
     const value = String(item || '').trim();

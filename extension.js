@@ -35,6 +35,8 @@ function activate(context) {
       await monitor.refreshNow('diagnostics');
       monitor.printDiagnostics(output);
     }),
+    vscode.commands.registerCommand('deepseekCostMonitor.rebuildLedger', () => monitor.rebuildLedger()),
+    vscode.commands.registerCommand('deepseekCostMonitor.clearLedger', () => monitor.clearLedger()),
     vscode.workspace.onDidChangeConfiguration(event => {
       if (event.affectsConfiguration('deepseekCostMonitor')) monitor.reconfigure();
     })

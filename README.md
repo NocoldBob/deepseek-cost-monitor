@@ -6,9 +6,9 @@
 
 <p align="center"><strong>一只住在 VS Code 侧边栏里的鲸鱼记账员 🐋</strong></p>
 
-<p align="center"><em>不碰 API Key，不发网络请求，只在本地日志里捞 token，按官方价目表算今天的账。</em></p>
+<p align="center"><em>不碰 API Key，不发网络请求，只在本地日志里捞 token，按官方价目表算今天和历史的账。</em></p>
 
-<p align="center"><sub>v0.1.1 · 本地优先 · 零依赖 · 不需要 API Key</sub></p>
+<p align="center"><sub>v0.2.0 · 本地优先 · 零依赖 · 不需要 API Key</sub></p>
 
 ---
 
@@ -18,7 +18,7 @@
 
 DeepSeek 目前没有公开的逐请求用量 API。与其盯着余额猜今天花了多少，不如直接读 Claude Code 已经写在本地的会话记录。
 
-于是这只鲸鱼来了：它不问你钥匙，也不替你发请求，只是把本地 JSONL 里的 `usage` 数字捞出来，数一数输入、缓存命中和输出 token，再按 DeepSeek 官方价目表拨拨算盘，最后在侧边栏里给你一个**今日消费估算**。
+于是这只鲸鱼来了：它不问你钥匙，也不替你发请求，只是把本地 JSONL 里的 `usage` 数字捞出来，数一数输入、缓存命中和输出 token，再按 DeepSeek 官方价目表拨拨算盘，最后在侧边栏里给你**今日消费估算**和一本**每日历史账本**。
 
 一句话：**它不生产账单，它只是账单的搬运工（估算版）。**
 
@@ -30,6 +30,8 @@ DeepSeek 目前没有公开的逐请求用量 API。与其盯着余额猜今天�
 - **按钟点计价**：以北京时间（UTC+8）划分“今天”；工作日 `09:00–12:00`、`14:00–18:00` 为高峰，其余时间及法定节假日按低谷计价（半价）。
 - **按官方价目**：支持 CNY / USD 两套官方价目，不做汇率换算；模型名后的 `[1m]` 等别名会先去掉再查价。
 - **子代理也算**：默认把子代理请求并入父会话；可以在设置里关掉。
+- **每日账本**：按北京时间把请求聚合到“日 × 模型 × 主/子代理 × 高峰/低谷”，只存 token 与请求数，不存金额、聊天内容、会话 ID 或路径。
+- **历史回溯**：首次运行会从现有日志回溯；之后即使 Claude Code 日志被清理，已写入账本的历史仍保留。
 
 > 当前价目（CNY，高峰价，每百万 token，开发时 2026-11 的官方公开价）：
 >
@@ -45,22 +47,24 @@ DeepSeek 目前没有公开的逐请求用量 API。与其盯着余额猜今天�
 - 不需要 DeepSeek API Key，也不需要任何登录或认证凭据。
 - 不向 DeepSeek 发请求，不拦截、不代理、不重放你的流量。
 - 没有遥测、没有上报、没有把会话记录打包寄出去。
-- 不在本地另存一份账本；聚合结果只留在扩展内存里。
+- 本地账本只保存每日 token 用量、模型名、请求数和峰谷分桶，不保存聊天内容、会话 ID、cwd 或文件路径。
 
 你的 token 和聊天记录都待在这台机器上。鲸鱼只负责看，不负责外传。
 
 ## 你会看到什么？
 
-- 侧边栏“今日消费”：今日金额、去重请求数、token 明细、高峰/低谷徽标。
+- 侧边栏 **今日**：今日金额、去重请求数、token 明细、高峰/低谷徽标。
+- 侧边栏 **历史**：日、周、月、季、年统计；最近 7/30/90 天、本周/月/季/年、自定义范围。
+- 历史页的消费波动图、日历热力图、按模型统计和周期明细。
 - 按模型的金额与 token 拆分。
 - 按会话的金额、cwd、session 短 ID 拆分。
 - 状态栏实时金额；点击聚焦侧边栏。
 - 文件变化自动刷新，另有 10–3600 秒可调的定时刷新。
-- 估算警告：未知 DeepSeek 模型、被排除的非 DeepSeek 模型等。
+- 估算警告：未知 DeepSeek 模型、被排除的非 DeepSeek 模型、仅有账本快照的日期等。
 
 ## 安装
 
-**当前版本 0.1.1，Marketplace 发布准备已完成。** 发布后可直接在扩展视图搜索 **DeepSeek Cost Monitor**，或执行：
+**当前版本 0.2.0，Marketplace 发布准备已完成。** 发布后可直接在扩展视图搜索 **DeepSeek Cost Monitor**，或执行：
 
 ```bash
 code --install-extension NocoldBob.deepseek-cost-monitor
@@ -77,7 +81,7 @@ git clone https://github.com/NocoldBob/deepseek-cost-monitor.git
 cd deepseek-cost-monitor
 npm install
 npm run package
-code --install-extension .\deepseek-cost-monitor-0.1.1.vsix
+code --install-extension .\deepseek-cost-monitor-0.2.0.vsix
 ```
 
 Windows 用户也可以直接运行 `.\pack.ps1` 打包、`.\install.ps1` 安装最新 VSIX。
@@ -89,7 +93,7 @@ git clone https://github.com/NocoldBob/deepseek-cost-monitor.git
 cd deepseek-cost-monitor
 npm install
 npm run package
-code --install-extension ./deepseek-cost-monitor-0.1.1.vsix
+code --install-extension ./deepseek-cost-monitor-0.2.0.vsix
 ```
 
 如果已经拿到现成的 VSIX，只需执行最后一行安装命令，不需要 Node.js。
@@ -113,7 +117,9 @@ code --install-extension ./deepseek-cost-monitor-0.1.1.vsix
 |---|---|
 | `DeepSeek: 刷新 DeepSeek 消费` | 立即重新扫描本机会话记录 |
 | `DeepSeek: 打开 DeepSeek 消费面板` | 聚焦侧边栏 |
-| `DeepSeek: 输出诊断与自检信息` | 在输出面板打印设置、计价断言和统计快照 |
+| `DeepSeek: 输出诊断与自检信息` | 在输出面板打印设置、计价断言、账本与统计快照 |
+| `DeepSeek: 从日志重建账本` | 按当前日志全量重算并替换账本，金额可能变小 |
+| `DeepSeek: 清除历史账本` | 删除扩展本地账本；本次会话暂停写入，重新加载后从日志重建 |
 
 ## 设置
 
@@ -126,7 +132,7 @@ code --install-extension ./deepseek-cost-monitor-0.1.1.vsix
 | `deepseekCostMonitor.showStatusBar` | `true` | 是否显示状态栏金额 |
 | `deepseekCostMonitor.refreshIntervalSeconds` | `30` | 定时刷新间隔（10–3600） |
 | `deepseekCostMonitor.rateOverrides` | `{}` | 按模型覆盖高峰单价 |
-| `deepseekCostMonitor.holidays` | 内置 2026 | 法定节假日（北京时间） |
+| `deepseekCostMonitor.holidays` | `[]` | 自定义法定节假日；留空使用内置 2024–2027 表（machine 作用域） |
 
 ## 口径与边界
 
@@ -134,12 +140,15 @@ code --install-extension ./deepseek-cost-monitor-0.1.1.vsix
 - “今日”按北京时间切；请求数按 `message.id` 去重；总 token 含缓存命中，因此可能和 DeepSeek 控制台的 “Tokens” 口径不同。
 - 金额是**估算**，不是官方账单：流式中间态、失败请求、价目调整、节假日表过期都可能造成偏差。报销、对账、发票请以 DeepSeek 控制台为准。
 - 只读取追加式 JSONL；同一个文件被原地重写成相同或更小尺寸的情况检测不到。
-- 内置节假日表需要每年更新；2027 年起请更新 `holidays`。
+- **历史金额按当前价目表重算**，调价或修改节假日/覆盖单价后，历史数字会随之变化；账本只保存 token 与请求数，不保存金额。
+- 历史回溯上限受 Claude Code 的 `cleanupPeriodDays`（默认约 30 天）限制；首次运行前已被清理的日志无法补算。扩展会在历史页和诊断中提示检出值。
+- 已写入账本的日期不受日志删除影响；日志被删除后，历史页会把这些日期标记为“仅账本快照”。
+- 内置节假日覆盖 2024–2027；2028 年起需要更新 `holidays` 或升级扩展。
 - 这是社区项目，不是 DeepSeek 官方产品，与 DeepSeek 无隶属关系。
 
 ## 适合谁？
 
-适合：用 Claude Code + DeepSeek，想知道“今天大概花了多少”，又不想交出 API Key 的开发者。
+适合：用 Claude Code + DeepSeek，想知道“今天和最近大概花了多少”，又不想交出 API Key 的开发者。
 
 不太适合：需要官方账单、团队分账或精确发票的财务场景，以及不用 Claude Code 或主要使用其他模型的场景。
 
@@ -151,10 +160,12 @@ code --install-extension ./deepseek-cost-monitor-0.1.1.vsix
 
 如果这只鲸鱼帮你少开了一次控制台，欢迎给它一颗 ⭐。
 
-它不会说话，但会在状态栏里默默把今天的数字更新下去。
+它不会说话，但会在状态栏里默默把今天和历史的数字更新下去。
 
 ## License
 
 除鲸鱼封面图外，本仓库的全部内容采用 [MIT License](LICENSE)。
 
 鲸鱼封面图 `resources/icon-options/whale-chart.png` 除外，不包含在 MIT 授权范围内；版权归作者所有，具体见 [ASSET-LICENSE.md](ASSET-LICENSE.md)。
+
+内置节假日数据来自 [NateScarlet/holiday-cn](https://github.com/NateScarlet/holiday-cn)（MIT License），随包离线内置，运行时不联网。

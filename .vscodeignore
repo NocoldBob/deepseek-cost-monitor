@@ -5,6 +5,8 @@
 .vscodeignore
 ci-artifacts/**
 tools/**
+test/**
+docs/**
 # Marketplace 包使用 MARKETPLACE.md 作为 readme，避免与生成的 readme.md 大小写冲突
 README.md
 pack.ps1
