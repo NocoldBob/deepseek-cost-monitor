@@ -14,15 +14,17 @@
 
 ```bash
 npm install
-npm run package
+npm run package:marketplace
 ```
 
-产物：`deepseek-cost-monitor-0.1.0.vsix`
+安装包里的详情页使用精简版 `MARKETPLACE.md`；仓库的 `README.md` 保持完整文档，不会影响 Marketplace 展示。
+
+产物：`deepseek-cost-monitor-0.1.1.vsix`
 
 安装验证：
 
 ```bash
-code --install-extension ./deepseek-cost-monitor-0.1.0.vsix --force
+code --install-extension ./deepseek-cost-monitor-0.1.1.vsix --force
 ```
 
 Windows 下把 `./` 换成 `.\` 即可。VSIX 是纯 JavaScript 包，没有原生依赖，同一个文件可在 Windows 10/11、Ubuntu 22.04/24.04、macOS 上安装。

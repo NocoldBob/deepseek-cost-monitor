@@ -2,7 +2,7 @@
   "name": "deepseek-cost-monitor",
   "displayName": "DeepSeek Cost Monitor",
   "description": "在 VS Code 侧边栏显示今日 DeepSeek API 估算消费（基于 Claude Code 本地会话记录）",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "NocoldBob",
   "license": "MIT",
   "icon": "resources/icon-options/whale-chart.png",
@@ -16,7 +16,8 @@
   },
   "scripts": {
     "package": "vsce package",
-    "publish:marketplace": "vsce publish",
+    "package:marketplace": "vsce package --readme-path MARKETPLACE.md",
+    "publish:marketplace": "vsce publish --readme-path MARKETPLACE.md",
     "check": "node tools/extension_check.js"
   },
   "engines": {

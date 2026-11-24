@@ -2,6 +2,14 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 格式，版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [0.1.1] - 2026-11-24
+
+### 变更
+
+- Marketplace 详情页改用精简介绍（`MARKETPLACE.md`），仓库 README 保持完整。
+- 新增 `npm run package:marketplace`，CI 与本地发布包均使用精简版介绍。
+- 版本号更新至 0.1.1。
+
 ## [0.1.0] - 2026-11-24
 
 ### 新增

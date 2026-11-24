@@ -8,7 +8,7 @@
 
 <p align="center"><em>不碰 API Key，不发网络请求，只在本地日志里捞 token，按官方价目表算今天的账。</em></p>
 
-<p align="center"><sub>v0.1.0 · 本地优先 · 零依赖 · 不需要 API Key</sub></p>
+<p align="center"><sub>v0.1.1 · 本地优先 · 零依赖 · 不需要 API Key</sub></p>
 
 ---
 
@@ -60,7 +60,7 @@ DeepSeek 目前没有公开的逐请求用量 API。与其盯着余额猜今天�
 
 ## 安装
 
-**当前版本 0.1.0，Marketplace 发布准备已完成。** 发布后可直接在扩展视图搜索 **DeepSeek Cost Monitor**，或执行：
+**当前版本 0.1.1，Marketplace 发布准备已完成。** 发布后可直接在扩展视图搜索 **DeepSeek Cost Monitor**，或执行：
 
 ```bash
 code --install-extension NocoldBob.deepseek-cost-monitor
@@ -77,7 +77,7 @@ git clone https://github.com/NocoldBob/deepseek-cost-monitor.git
 cd deepseek-cost-monitor
 npm install
 npm run package
-code --install-extension .\deepseek-cost-monitor-0.1.0.vsix
+code --install-extension .\deepseek-cost-monitor-0.1.1.vsix
 ```
 
 Windows 用户也可以直接运行 `.\pack.ps1` 打包、`.\install.ps1` 安装最新 VSIX。
@@ -89,7 +89,7 @@ git clone https://github.com/NocoldBob/deepseek-cost-monitor.git
 cd deepseek-cost-monitor
 npm install
 npm run package
-code --install-extension ./deepseek-cost-monitor-0.1.0.vsix
+code --install-extension ./deepseek-cost-monitor-0.1.1.vsix
 ```
 
 如果已经拿到现成的 VSIX，只需执行最后一行安装命令，不需要 Node.js。
@@ -105,7 +105,7 @@ code --install-extension ./deepseek-cost-monitor-0.1.0.vsix
 - Windows 10/11、Ubuntu 22.04/24.04、macOS 等 VS Code 桌面平台。
 - 纯 JavaScript，无原生依赖；同一个 VSIX 跨平台通用。
 - 要求 VS Code 1.90.0 及以上。
-- 扩展在本机运行，读取本机会话记录；Remote-SSH 远端机器上的日志不在 0.1.0 的统计范围内。
+- 扩展在本机运行，读取本机会话记录；Remote-SSH 远端机器上的日志不在当前版本的统计范围内。
 
 ## 常用命令
 
