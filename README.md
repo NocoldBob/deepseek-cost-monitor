@@ -121,4 +121,8 @@ code --install-extension .\local.deepseek-cost-monitor-0.1.0.vsix
 
 它不会说话，但会在状态栏里默默把今天的数字更新下去。
 
-License: MIT
+## License
+
+除鲸鱼封面图外，本仓库的全部内容采用 [MIT License](LICENSE)。
+
+鲸鱼封面图 `resources/icon-options/whale-chart.png` 除外，不包含在 MIT 授权范围内；版权归作者所有，具体见 [ASSET-LICENSE.md](ASSET-LICENSE.md)。

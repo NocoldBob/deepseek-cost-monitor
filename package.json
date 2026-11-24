@@ -6,6 +6,10 @@
   "publisher": "local",
   "license": "MIT",
   "icon": "resources/icon-options/whale-chart.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NocoldBob/deepseek-cost-monitor.git"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
