@@ -1,23 +1,29 @@
+# Windows convenience wrapper: install the newest VSIX in this directory.
 $ErrorActionPreference = 'Stop'
 
 $root = $PSScriptRoot
-$packageJson = Join-Path $root 'package.json'
-if (-not (Test-Path -LiteralPath $packageJson)) {
-    throw "未找到 package.json：$packageJson"
-}
-$manifest = Get-Content -LiteralPath $packageJson -Raw -Encoding UTF8 | ConvertFrom-Json
-$targetName = "$($manifest.publisher).$($manifest.name)-$($manifest.version)"
-$target = Join-Path $env:USERPROFILE ".vscode\extensions\$targetName"
+$vsix = Get-ChildItem -LiteralPath $root -Filter '*.vsix' -File |
+    Sort-Object LastWriteTime -Descending |
+    Select-Object -First 1
 
-New-Item -ItemType Directory -Force -Path $target | Out-Null
-
-$exclude = @('.vscode', 'tools', '.git', 'install.ps1', 'pack.ps1')
-Get-ChildItem -LiteralPath $root -Force | Where-Object {
-    $exclude -notcontains $_.Name -and $_.Name -notlike '.vsix-stage*' -and $_.Extension -ne '.vsix'
-} | ForEach-Object {
-    Copy-Item -LiteralPath $_.FullName -Destination $target -Recurse -Force
+if (-not $vsix) {
+    throw 'No VSIX found. Run .\pack.ps1 first, or download one from Marketplace / Releases.'
 }
 
-Write-Host "已复制扩展文件到：$target"
-Write-Host "下一步：在 VS Code 执行 “Developer: Reload Window”，活动栏将出现 “DeepSeek 消费”。"
-Write-Host "若未识别，请改用 F5 开发宿主，或运行 pack.ps1 生成 vsix 后安装。"
+$codeCmd = Get-Command code.cmd -ErrorAction SilentlyContinue
+if ($codeCmd) {
+    & $codeCmd.Source --install-extension $vsix.FullName --force
+    if ($LASTEXITCODE -ne 0) { throw "Install failed (exit $LASTEXITCODE)" }
+} else {
+    $codeExe = Get-Command code -ErrorAction SilentlyContinue
+    if (-not $codeExe) {
+        throw 'The code command was not found. Run "Shell Command: Install code command in PATH" in VS Code first.'
+    }
+    $process = Start-Process -FilePath $codeExe.Source `
+        -ArgumentList @('--install-extension', $vsix.FullName, '--force') `
+        -Wait -PassThru
+    if ($process.ExitCode -ne 0) { throw "Install failed (exit $($process.ExitCode))" }
+}
+
+Write-Host "Installed: $($vsix.Name)"
+Write-Host 'Run "Developer: Reload Window" in VS Code to activate it.'

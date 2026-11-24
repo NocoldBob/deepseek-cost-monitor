@@ -1,0 +1,16 @@
+# 开发、测试与打包相关文件不进入 VSIX
+.vscode/**
+.github/**
+.gitignore
+.vscodeignore
+ci-artifacts/**
+tools/**
+pack.ps1
+install.ps1
+PUBLISHING.md
+*.vsix
+.vsix-stage/**
+node_modules/**
+package-lock.json
+.DS_Store
+Thumbs.db

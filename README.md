@@ -58,22 +58,54 @@ DeepSeek 目前没有公开的逐请求用量 API。与其盯着余额猜今天�
 - 文件变化自动刷新，另有 10–3600 秒可调的定时刷新。
 - 估算警告：未知 DeepSeek 模型、被排除的非 DeepSeek 模型等。
 
-## 快速开始
+## 安装
 
-**当前版本 0.1.0，Marketplace 上架准备中。** 现在可以先通过 VSIX 安装：
+**当前版本 0.1.0，Marketplace 发布准备已完成。** 发布后可直接在扩展视图搜索 **DeepSeek Cost Monitor**，或执行：
+
+```bash
+code --install-extension NocoldBob.deepseek-cost-monitor
+```
+
+Marketplace 页面（发布后）：<https://marketplace.visualstudio.com/items?itemName=NocoldBob.deepseek-cost-monitor>
+
+在 Marketplace 上架前，也可以从 VSIX 安装。
+
+### Windows PowerShell
 
 ```powershell
 git clone https://github.com/NocoldBob/deepseek-cost-monitor.git
 cd deepseek-cost-monitor
-powershell -ExecutionPolicy Bypass -File .\pack.ps1
-code --install-extension .\local.deepseek-cost-monitor-0.1.0.vsix
+npm install
+npm run package
+code --install-extension .\deepseek-cost-monitor-0.1.0.vsix
 ```
 
-然后执行 VS Code 命令 **Developer: Reload Window**，点击活动栏的 **DeepSeek 消费** 图标即可。
+Windows 用户也可以直接运行 `.\pack.ps1` 打包、`.\install.ps1` 安装最新 VSIX。
 
-没有 `npm install`，没有构建步骤，也没有原生依赖——这只鲸鱼吃的是纯 JavaScript。
+### Linux / macOS
+
+```bash
+git clone https://github.com/NocoldBob/deepseek-cost-monitor.git
+cd deepseek-cost-monitor
+npm install
+npm run package
+code --install-extension ./deepseek-cost-monitor-0.1.0.vsix
+```
+
+如果已经拿到现成的 VSIX，只需执行最后一行安装命令，不需要 Node.js。
+
+安装后执行 VS Code 命令 **Developer: Reload Window**，点击活动栏的 **DeepSeek 消费** 图标即可。
+
+扩展运行时不依赖 npm 包，没有构建步骤，也没有原生依赖——这只鲸鱼吃的是纯 JavaScript。只有制作 VSIX 时需要 Node.js 22+ 来安装 `vsce` 开发依赖。
 
 开发调试：用 VS Code 打开仓库，按 `F5` 启动扩展开发宿主。
+
+## 平台支持
+
+- Windows 10/11、Ubuntu 22.04/24.04、macOS 等 VS Code 桌面平台。
+- 纯 JavaScript，无原生依赖；同一个 VSIX 跨平台通用。
+- 要求 VS Code 1.90.0 及以上。
+- 扩展在本机运行，读取本机会话记录；Remote-SSH 远端机器上的日志不在 0.1.0 的统计范围内。
 
 ## 常用命令
 

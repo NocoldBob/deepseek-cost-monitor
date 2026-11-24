@@ -3,12 +3,21 @@
   "displayName": "DeepSeek Cost Monitor",
   "description": "在 VS Code 侧边栏显示今日 DeepSeek API 估算消费（基于 Claude Code 本地会话记录）",
   "version": "0.1.0",
-  "publisher": "local",
+  "publisher": "NocoldBob",
   "license": "MIT",
   "icon": "resources/icon-options/whale-chart.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/NocoldBob/deepseek-cost-monitor.git"
+  },
+  "homepage": "https://github.com/NocoldBob/deepseek-cost-monitor#readme",
+  "bugs": {
+    "url": "https://github.com/NocoldBob/deepseek-cost-monitor/issues"
+  },
+  "scripts": {
+    "package": "vsce package",
+    "publish:marketplace": "vsce publish",
+    "check": "node tools/extension_check.js"
   },
   "engines": {
     "vscode": "^1.90.0"
@@ -26,18 +35,18 @@
   ],
   "keywords": [
     "deepseek",
+    "deepseek api",
     "cost",
+    "cost monitor",
+    "billing",
     "usage",
     "tokens",
-    "claude code"
+    "claude code",
+    "vscode-extension"
   ],
   "main": "./extension.js",
   "activationEvents": [
-    "onStartupFinished",
-    "onView:deepseekCostMonitor.today",
-    "onCommand:deepseekCostMonitor.refresh",
-    "onCommand:deepseekCostMonitor.focus",
-    "onCommand:deepseekCostMonitor.showDiagnostics"
+    "onStartupFinished"
   ],
   "contributes": {
     "viewsContainers": {
@@ -186,5 +195,8 @@
         }
       }
     }
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^4.1.1"
   }
 }

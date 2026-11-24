@@ -1,10 +1,13 @@
 'use strict';
 
 const vscode = require('vscode');
+const manifest = require('../package.json');
+
+const extensionId = `${manifest.publisher}.${manifest.name}`;
 
 exports.run = async function () {
-  const extension = vscode.extensions.getExtension('local.deepseek-cost-monitor');
-  if (!extension) throw new Error('未找到扩展 local.deepseek-cost-monitor');
+  const extension = vscode.extensions.getExtension(extensionId);
+  if (!extension) throw new Error(`未找到扩展 ${extensionId}`);
   await extension.activate();
 
   const allCommands = await vscode.commands.getCommands(true);
