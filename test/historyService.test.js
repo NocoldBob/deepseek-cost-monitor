@@ -83,6 +83,21 @@ test('首次运行：账本缺失不是错误，写入后变成可用', () => {
   }
 });
 
+test('账本目录不存在时首次运行会自动创建（globalStorage 首次运行）', () => {
+  const base = tempDir();
+  const dir = path.join(base, 'nested', 'globalStorage');
+  try {
+    const svc = service(dir);
+    const loaded = svc.load(NOW);
+    assert.strictEqual(loaded.status, 'missing');
+    const result = svc.recordDays(daysOf([record()]), SIGNATURE, NOW);
+    assert.strictEqual(result.written, true, result.error || '首次写盘应成功');
+    assert.ok(fs.existsSync(ledgerPathFor(dir)), '账本文件应已创建');
+  } finally {
+    cleanup(base);
+  }
+});
+
 test('多窗口：后写者重新读取磁盘，不丢另一窗口的日期', () => {
   const dir = tempDir();
   try {

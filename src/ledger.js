@@ -501,6 +501,13 @@ function acquireLockSync(lockPath, options) {
   const staleMs = Number.isFinite(opts.staleMs) ? opts.staleMs : LOCK_STALE_MS;
   const delays = Array.isArray(opts.delays) ? opts.delays : LOCK_RETRY_DELAYS_MS;
   let staleRemoved = false;
+  try {
+    // 首次运行时 globalStorage 扩展目录可能还不存在；锁文件在写盘前创建，
+    // 必须先保证父目录存在，否则 open('wx') 会以 ENOENT 失败，历史账本写不进去。
+    fs.mkdirSync(path.dirname(lockPath), { recursive: true });
+  } catch (error) {
+    return { ok: false, staleRemoved, error: `无法创建账本目录：${error.message}` };
+  }
   for (let attempt = 0; attempt < delays.length; attempt += 1) {
     const delay = Number(delays[attempt]) || 0;
     if (delay) sleepSync(delay);
