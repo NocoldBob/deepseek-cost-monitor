@@ -1,0 +1,185 @@
+{
+  "name": "deepseek-cost-monitor",
+  "displayName": "DeepSeek Cost Monitor",
+  "description": "在 VS Code 侧边栏显示今日 DeepSeek API 估算消费（基于 Claude Code 本地会话记录）",
+  "version": "0.1.0",
+  "publisher": "local",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "extensionKind": [
+    "ui"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "deepseek",
+    "cost",
+    "usage",
+    "tokens",
+    "claude code"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:deepseekCostMonitor.today",
+    "onCommand:deepseekCostMonitor.refresh",
+    "onCommand:deepseekCostMonitor.focus",
+    "onCommand:deepseekCostMonitor.showDiagnostics"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "deepseekCostMonitor",
+          "title": "DeepSeek 消费",
+          "icon": "resources/activity.svg"
+        }
+      ]
+    },
+    "views": {
+      "deepseekCostMonitor": [
+        {
+          "id": "deepseekCostMonitor.today",
+          "name": "今日消费",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "deepseekCostMonitor.refresh",
+        "title": "刷新 DeepSeek 消费",
+        "category": "DeepSeek",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "deepseekCostMonitor.focus",
+        "title": "打开 DeepSeek 消费面板",
+        "category": "DeepSeek"
+      },
+      {
+        "command": "deepseekCostMonitor.showDiagnostics",
+        "title": "输出诊断与自检信息",
+        "category": "DeepSeek"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "deepseekCostMonitor.refresh",
+          "when": "view == deepseekCostMonitor.today",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "DeepSeek 消费监控",
+      "properties": {
+        "deepseekCostMonitor.projectsPath": {
+          "type": "string",
+          "default": "",
+          "scope": "window",
+          "description": "Claude Code 会话记录根目录。留空使用 ~/.claude/projects。"
+        },
+        "deepseekCostMonitor.modelPrefixes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "deepseek"
+          ],
+          "scope": "window",
+          "description": "计入统计的模型名前缀（不区分大小写）。"
+        },
+        "deepseekCostMonitor.currency": {
+          "type": "string",
+          "enum": [
+            "CNY",
+            "USD"
+          ],
+          "default": "CNY",
+          "scope": "window",
+          "description": "金额展示币种，按 DeepSeek 官方对应币种价目计算。"
+        },
+        "deepseekCostMonitor.rateOverrides": {
+          "type": "object",
+          "default": {},
+          "scope": "window",
+          "description": "按模型覆盖高峰单价（每百万 token），形如 {\"模型\":{\"CNY\":{\"cacheHit\":0.04,\"cacheMiss\":2,\"output\":8}}}。低谷价始终为高峰价的一半。"
+        },
+        "deepseekCostMonitor.holidays": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "2026-01-01",
+            "2026-01-02",
+            "2026-01-03",
+            "2026-02-15",
+            "2026-02-16",
+            "2026-02-17",
+            "2026-02-18",
+            "2026-02-19",
+            "2026-02-20",
+            "2026-02-21",
+            "2026-02-22",
+            "2026-02-23",
+            "2026-04-04",
+            "2026-04-05",
+            "2026-04-06",
+            "2026-05-01",
+            "2026-05-02",
+            "2026-05-03",
+            "2026-05-04",
+            "2026-05-05",
+            "2026-06-19",
+            "2026-06-20",
+            "2026-06-21",
+            "2026-09-25",
+            "2026-09-26",
+            "2026-09-27",
+            "2026-10-01",
+            "2026-10-02",
+            "2026-10-03",
+            "2026-10-04",
+            "2026-10-05",
+            "2026-10-06",
+            "2026-10-07"
+          ],
+          "scope": "window",
+          "description": "法定节假日日期（YYYY-MM-DD，北京时间），这些日期按低谷计价。需每年更新。"
+        },
+        "deepseekCostMonitor.refreshIntervalSeconds": {
+          "type": "number",
+          "default": 30,
+          "minimum": 10,
+          "maximum": 3600,
+          "scope": "window",
+          "description": "定时刷新间隔（秒）。文件变化仍会立即触发刷新。"
+        },
+        "deepseekCostMonitor.includeSubagents": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "description": "是否统计子代理产生的请求。"
+        },
+        "deepseekCostMonitor.showStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "description": "是否在状态栏显示今日消费。"
+        }
+      }
+    }
+  }
+}
