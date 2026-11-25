@@ -321,11 +321,26 @@ body {
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px 8px;
 }
 
-.chips-sm {
-  margin-top: -6px;
+.chip-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.block-head .chips {
+  justify-content: flex-end;
+  gap: 4px 6px;
 }
 
 .chip {
@@ -425,7 +440,8 @@ body {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
+  margin-top: 2px;
 }
 
 .custom-range input[type="date"] {
@@ -517,10 +533,27 @@ body {
 
 .chart-hit {
   fill: transparent;
+  cursor: pointer;
 }
 
 .chart-hit:hover {
   fill: rgba(128, 128, 128, 0.08);
+}
+
+.chart-hit.is-selected {
+  fill: rgba(55, 148, 255, 0.12);
+}
+
+.chart-dot.is-selected {
+  fill: var(--vscode-focusBorder, #007fd4);
+}
+
+.chart-detail {
+  margin-top: 8px;
+}
+
+.chart-detail .change {
+  margin-top: 0;
 }
 
 /* ---------- 热力图 ---------- */
@@ -529,13 +562,24 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.heatmap-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .heatmap-year {
   display: inline-flex;
   align-items: center;
   gap: 2px;
+}
+
+.heat-today {
+  margin-left: 0;
 }
 
 .heatmap-year .icon-btn {
@@ -558,6 +602,7 @@ body {
   display: flex;
   align-items: flex-start;
   gap: 4px;
+  min-width: 0;
 }
 
 .heatmap-weekdays {
@@ -575,12 +620,26 @@ body {
 }
 
 .heatmap-scroll {
+  display: flex;
+  align-items: flex-start;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
   padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
+/* 左右各留半个视口，年初/年末的日期也能滚到正中，而不是贴边。 */
+.heatmap-scroll::before,
+.heatmap-scroll::after {
+  content: '';
+  flex: 0 0 calc(50% - 6px);
 }
 
 .heatmap-grid {
   display: grid;
+  flex: 0 0 auto;
   grid-auto-flow: column;
   grid-template-rows: repeat(7, 10px);
   grid-auto-columns: 10px;
@@ -592,12 +651,34 @@ body {
   display: block;
   width: 10px;
   height: 10px;
+  padding: 0;
+  border: 1px solid transparent;
   border-radius: 2px;
   background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.12));
+  font: inherit;
+  cursor: pointer;
+}
+
+.heat-cell:disabled {
+  cursor: default;
+}
+
+.heat-cell:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: 1px;
+}
+
+.heat-cell.today {
+  box-shadow: inset 0 0 0 1px var(--vscode-focusBorder, #007fd4);
+}
+
+.heat-cell.selected {
+  box-shadow: inset 0 0 0 2px var(--vscode-foreground);
 }
 
 .heat-cell.blank {
   background: transparent;
+  cursor: default;
 }
 
 .heat-cell.future {
@@ -663,4 +744,64 @@ body {
 
 .heat-legend-sep {
   width: 6px;
+}
+
+/* ---------- 选中日详情 ---------- */
+
+.heat-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 9px;
+  border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border, rgba(128, 128, 128, 0.3)));
+  border-radius: 6px;
+  background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.08));
+}
+
+.heat-detail-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.heat-detail-date {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.heat-detail-cost {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.heat-detail-sub {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.heat-models {
+  margin-top: 2px;
+}
+
+.heat-models summary {
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.heat-models .rows {
+  margin-top: 6px;
+}
+
+.heat-models .row {
+  padding: 5px 7px;
+}
+
+.period-toggle {
+  align-self: flex-end;
+  margin-left: 0;
 }

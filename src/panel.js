@@ -202,15 +202,19 @@ class MonitorPanelProvider {
   </div>
 
   <div id="historyPane" class="hidden">
-    <div class="chips" id="rangeBar" role="group" aria-label="时间范围">
-      <button class="chip" type="button" data-preset="last7">近 7 天</button>
-      <button class="chip is-active" type="button" data-preset="last30">近 30 天</button>
-      <button class="chip" type="button" data-preset="last90">近 90 天</button>
-      <button class="chip" type="button" data-preset="thisWeek">本周</button>
-      <button class="chip" type="button" data-preset="thisMonth">本月</button>
-      <button class="chip" type="button" data-preset="thisQuarter">本季</button>
-      <button class="chip" type="button" data-preset="thisYear">今年</button>
-      <button class="chip" type="button" data-preset="custom">自定义</button>
+    <div class="chip-groups" id="rangeBar" role="group" aria-label="时间范围">
+      <div class="chips" role="group" aria-label="快捷范围">
+        <button class="chip" type="button" data-preset="last7">近 7 天</button>
+        <button class="chip is-active" type="button" data-preset="last30">近 30 天</button>
+        <button class="chip" type="button" data-preset="last90">近 90 天</button>
+      </div>
+      <div class="chips" role="group" aria-label="日历范围">
+        <button class="chip" type="button" data-preset="thisWeek">本周</button>
+        <button class="chip" type="button" data-preset="thisMonth">本月</button>
+        <button class="chip" type="button" data-preset="thisQuarter">本季</button>
+        <button class="chip" type="button" data-preset="thisYear">今年</button>
+        <button class="chip" type="button" data-preset="custom">自定义</button>
+      </div>
     </div>
 
     <div id="customRange" class="custom-range hidden">
@@ -218,15 +222,6 @@ class MonitorPanelProvider {
       <span class="custom-sep">→</span>
       <input type="date" id="customTo" aria-label="结束日期">
       <button id="customApply" class="chip" type="button">应用</button>
-    </div>
-
-    <div class="chips chips-sm" id="granBar" role="group" aria-label="聚合粒度">
-      <button class="chip is-active" type="button" data-granularity="auto">自动</button>
-      <button class="chip" type="button" data-granularity="day">日</button>
-      <button class="chip" type="button" data-granularity="week">周</button>
-      <button class="chip" type="button" data-granularity="month">月</button>
-      <button class="chip" type="button" data-granularity="quarter">季</button>
-      <button class="chip" type="button" data-granularity="year">年</button>
     </div>
 
     <div id="retentionBanner" class="banner info hidden">
@@ -260,17 +255,32 @@ class MonitorPanelProvider {
     </section>
 
     <section class="block">
-      <div class="block-title">消费波动</div>
+      <div class="block-head">
+        <div class="block-title">消费波动</div>
+        <div class="chips" id="granBar" role="group" aria-label="聚合粒度">
+          <button class="chip is-active" type="button" data-granularity="auto">自动</button>
+          <button class="chip" type="button" data-granularity="day">日</button>
+          <button class="chip" type="button" data-granularity="week">周</button>
+          <button class="chip" type="button" data-granularity="month">月</button>
+          <button class="chip" type="button" data-granularity="quarter">季</button>
+          <button class="chip" type="button" data-granularity="year">年</button>
+        </div>
+      </div>
       <div id="trendChart" class="chart-wrap"><div class="empty">—</div></div>
+      <div id="chartDetail" class="heat-detail chart-detail hidden" aria-live="polite"></div>
+      <button id="periodToggle" class="link-btn period-toggle hidden" type="button">显示周期数据表</button>
     </section>
 
     <section class="block">
       <div class="block-title heatmap-head">
         <span>日历热力图</span>
-        <span class="heatmap-year">
-          <button id="heatPrevYear" class="icon-btn" type="button" title="上一年">‹</button>
-          <span id="heatYear">—</span>
-          <button id="heatNextYear" class="icon-btn" type="button" title="下一年">›</button>
+        <span class="heatmap-actions">
+          <span class="heatmap-year">
+            <button id="heatPrevYear" class="icon-btn" type="button" title="上一年">‹</button>
+            <span id="heatYear">—</span>
+            <button id="heatNextYear" class="icon-btn" type="button" title="下一年">›</button>
+          </span>
+          <button id="heatToday" class="link-btn heat-today" type="button" title="回到今天并居中">今天</button>
         </span>
       </div>
       <div id="heatmap" class="heatmap-wrap"><div class="empty">—</div></div>
@@ -286,6 +296,7 @@ class MonitorPanelProvider {
         <span class="heat-swatch zero"></span><span>有记录无消费</span>
         <span class="heat-swatch empty"></span><span>无记录</span>
       </div>
+      <div id="heatDetail" class="heat-detail hidden" aria-live="polite"></div>
     </section>
 
     <section class="block">
@@ -293,8 +304,11 @@ class MonitorPanelProvider {
       <div id="historyModels" class="rows"><div class="empty">—</div></div>
     </section>
 
-    <section class="block">
-      <div class="block-title" id="periodTitle">明细</div>
+    <section class="block hidden" id="periodSection">
+      <div class="block-head period-head">
+        <div class="block-title" id="periodTitle">明细</div>
+        <button id="emptyPeriodToggle" class="link-btn hidden" type="button">显示无记录周期</button>
+      </div>
       <div id="periodList" class="rows"><div class="empty">—</div></div>
     </section>
 

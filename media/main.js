@@ -43,14 +43,20 @@
     histDays: document.getElementById('histDays'),
     histGaps: document.getElementById('histGaps'),
     trendChart: document.getElementById('trendChart'),
+    chartDetail: document.getElementById('chartDetail'),
     heatmap: document.getElementById('heatmap'),
     heatYear: document.getElementById('heatYear'),
     heatPrevYear: document.getElementById('heatPrevYear'),
     heatNextYear: document.getElementById('heatNextYear'),
+    heatToday: document.getElementById('heatToday'),
+    heatDetail: document.getElementById('heatDetail'),
     historyModelTitle: document.getElementById('historyModelTitle'),
     historyModels: document.getElementById('historyModels'),
+    periodSection: document.getElementById('periodSection'),
     periodTitle: document.getElementById('periodTitle'),
     periodList: document.getElementById('periodList'),
+    periodToggle: document.getElementById('periodToggle'),
+    emptyPeriodToggle: document.getElementById('emptyPeriodToggle'),
     historyWarnings: document.getElementById('historyWarnings'),
     ledgerFoot: document.getElementById('ledgerFoot')
   };
@@ -81,8 +87,20 @@
     customFrom: typeof persisted.customFrom === 'string' ? persisted.customFrom : null,
     customTo: typeof persisted.customTo === 'string' ? persisted.customTo : null,
     heatmapYear: Number.isInteger(persisted.heatmapYear) ? persisted.heatmapYear : currentBeijingYear,
+    selectedDateKey: /^\d{4}-\d{2}-\d{2}$/.test(String(persisted.selectedDateKey || ''))
+      ? persisted.selectedDateKey
+      : null,
+    selectedPeriodKey: typeof persisted.selectedPeriodKey === 'string'
+      ? persisted.selectedPeriodKey
+      : null,
+    showPeriodList: persisted.showPeriodList === true || persisted.showDayList === true,
+    showEmptyPeriods: persisted.showEmptyPeriods === true,
     history: null,
-    heatmap: null
+    heatmap: null,
+    heatmapCells: new Map(),
+    heatmapDayMap: new Map(),
+    heatmapYearMeta: null,
+    heatmapScrollYear: null
   };
   if (state.preset === 'custom' && (!state.customFrom || !state.customTo)) {
     state.customFrom = beijingDayKey(-29);
@@ -96,7 +114,11 @@
       granularity: state.granularity,
       customFrom: state.customFrom,
       customTo: state.customTo,
-      heatmapYear: state.heatmapYear
+      heatmapYear: state.heatmapYear,
+      selectedDateKey: state.selectedDateKey,
+      selectedPeriodKey: state.selectedPeriodKey,
+      showPeriodList: state.showPeriodList,
+      showEmptyPeriods: state.showEmptyPeriods
     });
   }
 
@@ -345,11 +367,25 @@
 
   function renderPeriods(data) {
     clear(nodes.periodList);
-    const periods = (data.periods || []).slice().reverse();
-    nodes.periodTitle.textContent = `明细（${(data.periods || []).length} 个${granularityName(data.granularity)}）`;
+    const allPeriods = (data.periods || []).slice().reverse();
+    const emptyCount = allPeriods.filter(period => period.daysWithData === 0).length;
+    const periods = state.showEmptyPeriods
+      ? allPeriods
+      : allPeriods.filter(period => period.daysWithData > 0);
+
+    nodes.periodTitle.textContent = `明细（${periods.length} 个${granularityName(data.granularity)}）` +
+      (!state.showEmptyPeriods && emptyCount ? ` · 已隐藏 ${emptyCount} 个无记录` : '');
+    if (nodes.emptyPeriodToggle) {
+      setHidden(nodes.emptyPeriodToggle, emptyCount === 0);
+      nodes.emptyPeriodToggle.textContent = state.showEmptyPeriods
+        ? '隐藏无记录周期'
+        : `显示无记录周期（${emptyCount}）`;
+    }
 
     if (!periods.length) {
-      nodes.periodList.appendChild(createEmpty('该范围内没有数据'));
+      nodes.periodList.appendChild(createEmpty(
+        emptyCount ? '没有有记录的周期；可显示无记录周期查看范围。' : '该范围内没有数据'
+      ));
       return;
     }
 
@@ -406,6 +442,16 @@
     }
   }
 
+  // 热力图/折线图已经承担主视图；数据表默认收起，需要核对明细时再展开。
+  function syncPeriodVisibility(granularity) {
+    const isDay = granularity === 'day';
+    setHidden(nodes.periodToggle, false);
+    setHidden(nodes.periodSection, !state.showPeriodList);
+    nodes.periodToggle.textContent = state.showPeriodList
+      ? '收起数据表'
+      : (isDay ? '显示每日列表' : '显示周期数据表');
+  }
+
   // ---------- 图表 ----------
 
   function svgNode(name, attrs) {
@@ -420,13 +466,126 @@
     return node;
   }
 
-  function renderTrendChart(periods, symbol, granularity) {
-    clear(nodes.trendChart);
-    const list = Array.isArray(periods) ? periods : [];
-    if (!list.length || !list.some(period => Number(period.cost) > 0)) {
-      nodes.trendChart.appendChild(createEmpty('该范围内暂无计入消费的数据'));
+  function periodTags(period) {
+    const tags = [];
+    if (period.inProgress) tags.push('进行中');
+    else if (period.partial) tags.push('不完整');
+    if (period.daysWithData === 0) tags.push('无记录');
+    if (period.staleDays > 0) tags.push('口径过期');
+    if (period.frozenDays > 0) tags.push('仅账本');
+    if (period.cost === 0 && period.requests === 0 && period.daysWithData > 0) {
+      tags.push('无计入消费');
+    }
+    return tags;
+  }
+
+  function renderChartDetail(period, symbol, granularity) {
+    const detail = nodes.chartDetail;
+    if (!detail) return;
+    if (!period) {
+      setHidden(detail, true);
       return;
     }
+
+    setHidden(detail, false);
+    clear(detail);
+
+    const head = document.createElement('div');
+    head.className = 'heat-detail-head';
+    const label = document.createElement('strong');
+    label.className = 'heat-detail-date';
+    label.textContent = period.label;
+    head.appendChild(label);
+
+    for (const tagText of periodTags(period)) {
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = tagText;
+      head.appendChild(tag);
+    }
+
+    const cost = document.createElement('span');
+    cost.className = 'heat-detail-cost';
+    cost.textContent = formatMoney(period.cost, symbol);
+    head.appendChild(cost);
+    detail.appendChild(head);
+
+    const sub = document.createElement('div');
+    sub.className = 'heat-detail-sub';
+    const bits = [
+      `${period.fromKey} → ${period.toKey}`,
+      `${period.requests} 次`,
+      `${formatTokens((period.tokens || {}).total)} tokens`
+    ];
+    if (period.daysWithData > 0) bits.push(`${period.daysWithData} 天有记录`);
+    sub.textContent = bits.join(' · ');
+    detail.appendChild(sub);
+
+    const change = formatChange(period.changePct);
+    const changeNode = document.createElement('span');
+    changeNode.className = 'change ' + (change ? change.cls : 'flat');
+    changeNode.textContent = change ? '环比 ' + change.text : '环比 —';
+    changeNode.title = changeTitle(period);
+    detail.appendChild(changeNode);
+
+    if (period.byModel && period.byModel.length) {
+      const models = document.createElement('details');
+      models.className = 'heat-models';
+      const summary = document.createElement('summary');
+      summary.textContent = `按模型（${period.byModel.length}）`;
+      models.appendChild(summary);
+      const rows = document.createElement('div');
+      rows.className = 'rows';
+      for (const model of period.byModel) {
+        const modelTags = [];
+        if (model.custom) modelTags.push('自定义价目');
+        if (model.estimated) modelTags.push('估算');
+        const tokens = model.tokens || {};
+        rows.appendChild(createRow(
+          model.model,
+          `${model.requests} 次 · ${formatTokens(tokens.total)} tokens`,
+          formatMoney(model.cost, symbol),
+          modelTags,
+          `未命中 ${exactTokens(tokens.cacheMiss)}；缓存 ${exactTokens(tokens.cacheHit)}；输出 ${exactTokens(tokens.output)}；合计 ${exactTokens(tokens.total)}`
+        ));
+      }
+      models.appendChild(rows);
+      detail.appendChild(models);
+    }
+  }
+
+  function renderTrendChart(periods, symbol, granularity) {
+    clear(nodes.trendChart);
+    const all = Array.isArray(periods) ? periods : [];
+
+    // 账本覆盖之前的周期没有记录，不应在图上画成一长串 ¥0。
+    let firstActive = -1;
+    let lastActive = -1;
+    for (let index = 0; index < all.length; index += 1) {
+      if (Number(all[index].daysWithData) > 0) {
+        if (firstActive < 0) firstActive = index;
+        lastActive = index;
+      }
+    }
+    const list = firstActive >= 0 ? all.slice(firstActive, lastActive + 1) : [];
+    if (!list.length || !list.some(period => Number(period.cost) > 0)) {
+      nodes.trendChart.appendChild(createEmpty('该范围内暂无计入消费的数据'));
+      if (nodes.chartDetail) setHidden(nodes.chartDetail, true);
+      return;
+    }
+
+    let selectedIndex = list.findIndex(period => period.key === state.selectedPeriodKey);
+    if (selectedIndex < 0) {
+      for (let index = list.length - 1; index >= 0; index -= 1) {
+        if (Number(list[index].daysWithData) > 0) {
+          selectedIndex = index;
+          break;
+        }
+      }
+    }
+    if (selectedIndex < 0) selectedIndex = list.length - 1;
+    const selected = list[selectedIndex];
+    state.selectedPeriodKey = selected.key;
 
     // 侧边栏宽度会变化：按容器实际宽度渲染，避免固定 560 宽 viewBox 在
     // 300px 侧边栏里把 10px 标签缩成 5px。
@@ -501,7 +660,8 @@
         y: top,
         width: slotWidth,
         height: plotH,
-        class: 'chart-hit'
+        class: 'chart-hit' + (index === selectedIndex ? ' is-selected' : ''),
+        'data-period-key': period.key
       });
       const title = svgNode('title');
       const bits = [
@@ -521,12 +681,13 @@
           cx: xFor(index),
           cy: yFor(period.cost),
           r: list.length > 90 ? 1.4 : 2.2,
-          class: 'chart-dot'
+          class: 'chart-dot' + (index === selectedIndex ? ' is-selected' : '')
         }));
       }
     }
 
     nodes.trendChart.appendChild(root);
+    renderChartDetail(selected, symbol, granularity);
   }
 
   // ---------- 热力图 ----------
@@ -543,13 +704,188 @@
     return bits.join(' · ');
   }
 
+  function weekdayName(dateKey) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
+    if (!match) return '';
+    const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+    return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date.getUTCDay()];
+  }
+
+  function shiftDayKey(dateKey, offset) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
+    if (!match) return dateKey;
+    const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + offset));
+    return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
+  }
+
+  function dayHeading(dateKey) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
+    if (!match) return dateKey;
+    return `${Number(match[2])}月${Number(match[3])}日 ${weekdayName(dateKey)}`;
+  }
+
+  function lastRecordedKey(dayMap, year) {
+    let latest = null;
+    for (const [key, day] of dayMap) {
+      if (!day || !day.hasRecord || key.slice(0, 4) !== String(year)) continue;
+      if (!latest || key > latest) latest = key;
+    }
+    return latest;
+  }
+
+  function centerHeatCell(scroll, cell) {
+    if (!scroll || !cell) return;
+    const scrollRect = scroll.getBoundingClientRect();
+    const cellRect = cell.getBoundingClientRect();
+    if (!scrollRect.width || !cellRect.width) return;
+    const contentLeft = cellRect.left - scrollRect.left + scroll.scrollLeft;
+    const max = Math.max(0, scroll.scrollWidth - scroll.clientWidth);
+    scroll.scrollLeft = Math.max(
+      0,
+      Math.min(max, contentLeft - scroll.clientWidth / 2 + cellRect.width / 2)
+    );
+  }
+
+  function updateHeatSelection() {
+    for (const [key, cell] of state.heatmapCells) {
+      const selected = key === state.selectedDateKey;
+      cell.classList.toggle('selected', selected);
+      cell.tabIndex = selected ? 0 : -1;
+    }
+  }
+
+  function renderHeatDetail() {
+    const detail = nodes.heatDetail;
+    const meta = state.heatmapYearMeta;
+    if (!detail) return;
+    if (!meta || !state.selectedDateKey) {
+      setHidden(detail, true);
+      return;
+    }
+
+    const dateKey = state.selectedDateKey;
+    const day = state.heatmapDayMap.get(dateKey) || null;
+    const future = dateKey > meta.todayKey;
+    const symbol = meta.symbol;
+
+    setHidden(detail, false);
+    clear(detail);
+
+    const head = document.createElement('div');
+    head.className = 'heat-detail-head';
+    const dateNode = document.createElement('strong');
+    dateNode.className = 'heat-detail-date';
+    dateNode.textContent = dayHeading(dateKey);
+    head.appendChild(dateNode);
+
+    const tags = [];
+    if (dateKey === meta.todayKey) tags.push('今天');
+    if (dateKey === meta.installDate) tags.push('安装日');
+    if (future) tags.push('未来');
+    else if (!day) tags.push('无记录');
+    else {
+      if (day.frozen) tags.push('仅账本');
+      if (day.stale) tags.push('口径过期');
+      if (day.estimated) tags.push('估算');
+      if (day.hasRecord && Number(day.cost) === 0 && Number(day.requests) === 0) {
+        tags.push('无计入消费');
+      }
+    }
+    for (const label of tags) {
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = label;
+      head.appendChild(tag);
+    }
+
+    const costNode = document.createElement('span');
+    costNode.className = 'heat-detail-cost';
+    costNode.textContent = day && !future ? formatMoney(day.cost, symbol) : '—';
+    head.appendChild(costNode);
+    detail.appendChild(head);
+
+    const sub = document.createElement('div');
+    sub.className = 'heat-detail-sub';
+    if (future) {
+      sub.textContent = '未来日期，暂无消费数据。';
+    } else if (!day) {
+      sub.textContent = '该日没有本地记录。';
+    } else {
+      const tokens = day.tokens || {};
+      const parts = [`${day.requests || 0} 次`, `${formatTokens(tokens.total)} tokens`];
+      const previous = state.heatmapDayMap.get(shiftDayKey(dateKey, -1));
+      if (previous && previous.hasRecord) {
+        const previousCost = Number(previous.cost) || 0;
+        const cost = Number(day.cost) || 0;
+        const diff = cost - previousCost;
+        if (previousCost <= 0) {
+          parts.push(cost > 0 ? '前日无计入消费' : '与前日持平');
+        } else if (Math.abs(diff) < 1e-9) {
+          parts.push('与前日持平');
+        } else {
+          const pct = diff / previousCost * 100;
+          parts.push(
+            `较前日 ${diff > 0 ? '+' : '-'}${formatMoney(Math.abs(diff), symbol)}（${
+              pct > 0 ? '+' : ''
+            }${pct.toFixed(1)}%）`
+          );
+        }
+      } else {
+        parts.push('前日无记录');
+      }
+      sub.textContent = parts.join(' · ');
+    }
+    detail.appendChild(sub);
+
+    if (day && !future && day.byModel && day.byModel.length) {
+      const models = document.createElement('details');
+      models.className = 'heat-models';
+      const summary = document.createElement('summary');
+      summary.textContent = `按模型（${day.byModel.length}）`;
+      models.appendChild(summary);
+      const rows = document.createElement('div');
+      rows.className = 'rows';
+      for (const model of day.byModel) {
+        const tagsForModel = [];
+        if (model.custom) tagsForModel.push('自定义价目');
+        if (model.estimated) tagsForModel.push('估算');
+        const modelTokens = model.tokens || {};
+        rows.appendChild(createRow(
+          model.model,
+          `${model.requests || 0} 次 · ${formatTokens(modelTokens.total)} tokens`,
+          formatMoney(model.cost, symbol),
+          tagsForModel,
+          `未命中 ${exactTokens(modelTokens.cacheMiss)}；缓存 ${exactTokens(modelTokens.cacheHit)}；输出 ${exactTokens(modelTokens.output)}；合计 ${exactTokens(modelTokens.total)}`
+        ));
+      }
+      models.appendChild(rows);
+      detail.appendChild(models);
+    }
+  }
+
+  function selectHeatDate(dateKey, focus) {
+    const cell = state.heatmapCells.get(dateKey);
+    if (!cell || cell.disabled) return;
+    state.selectedDateKey = dateKey;
+    updateHeatSelection();
+    renderHeatDetail();
+    persistState();
+    if (focus) cell.focus();
+  }
+
   function renderHeatmap(data, year) {
+    const previousScroll = nodes.heatmap.querySelector('.heatmap-scroll');
+    const previousScrollLeft = previousScroll ? previousScroll.scrollLeft : null;
     clear(nodes.heatmap);
+    state.heatmapCells = new Map();
+    state.heatmapDayMap = new Map();
+    state.heatmapYearMeta = null;
     nodes.heatYear.textContent = String(year);
     nodes.heatPrevYear.disabled = year <= 2000;
     nodes.heatNextYear.disabled = year >= currentBeijingYear;
     if (!data || data.reason === 'error' || data.reason === 'unavailable') {
       nodes.heatmap.appendChild(createEmpty((data && data.message) || '热力图不可用'));
+      setHidden(nodes.heatDetail, true);
       return;
     }
 
@@ -557,6 +893,9 @@
     const todayKey = data.todayKey || todayBeijingKey();
     const installDate = data.installDate || (data.ledger && data.ledger.installDate) || null;
     const dayMap = new Map((data.days || []).map(day => [day.dateKey, day]));
+    state.heatmapDayMap = dayMap;
+    state.heatmapYearMeta = { symbol, todayKey, installDate, year };
+
     const first = new Date(Date.UTC(year, 0, 1));
     const firstWeekday = (first.getUTCDay() + 6) % 7; // 0=周一
     const daysInYear = Math.round((Date.UTC(year + 1, 0, 1) - Date.UTC(year, 0, 1)) / (24 * 60 * 60 * 1000));
@@ -581,6 +920,7 @@
     scroll.className = 'heatmap-scroll';
     const grid = document.createElement('div');
     grid.className = 'heatmap-grid';
+    grid.setAttribute('aria-label', '按日期选择消费明细');
 
     for (let i = 0; i < firstWeekday; i += 1) {
       const blank = document.createElement('span');
@@ -588,6 +928,7 @@
       grid.appendChild(blank);
     }
 
+    let todayCell = null;
     for (let dayIndex = 0; dayIndex < daysInYear; dayIndex += 1) {
       const date = new Date(Date.UTC(year, 0, 1 + dayIndex));
       const dateKey = `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
@@ -596,21 +937,33 @@
       const hasRecord = Boolean(day && day.hasRecord);
       const cost = day ? Number(day.cost) || 0 : 0;
 
-      const cell = document.createElement('span');
+      const cell = document.createElement('button');
+      cell.type = 'button';
       cell.className = 'heat-cell';
-      if (future) cell.classList.add('future');
-      else if (!hasRecord) cell.classList.add('empty');
-      else if (cost <= 0) cell.classList.add('zero');
-      else if (maxCost > 0) {
+      cell.dataset.date = dateKey;
+      cell.tabIndex = -1;
+      if (future) {
+        cell.classList.add('future');
+        cell.disabled = true;
+      } else if (!hasRecord) {
+        cell.classList.add('empty');
+      } else if (cost <= 0) {
+        cell.classList.add('zero');
+      } else if (maxCost > 0) {
         const level = Math.max(1, Math.min(5, 1 + Math.floor((cost / maxCost) * 4.999)));
         cell.classList.add('heat-' + level);
       } else {
         cell.classList.add('heat-1');
       }
+      if (dateKey === todayKey) {
+        cell.classList.add('today');
+        todayCell = cell;
+      }
       if (dateKey === installDate) cell.classList.add('install');
       cell.title = heatTitle(dateKey, day, future, installDate, symbol);
       cell.setAttribute('aria-label', cell.title);
       grid.appendChild(cell);
+      state.heatmapCells.set(dateKey, cell);
     }
 
     const trailing = (7 - ((firstWeekday + daysInYear) % 7)) % 7;
@@ -620,9 +973,29 @@
       grid.appendChild(blank);
     }
 
+    if (!state.selectedDateKey || !state.heatmapCells.has(state.selectedDateKey)) {
+      const preferred = year === currentBeijingYear
+        ? todayKey
+        : (lastRecordedKey(dayMap, year) || `${year}-01-01`);
+      state.selectedDateKey = state.heatmapCells.has(preferred) ? preferred : `${year}-01-01`;
+    }
+    updateHeatSelection();
+
     scroll.appendChild(grid);
     body.appendChild(scroll);
     nodes.heatmap.appendChild(body);
+    renderHeatDetail();
+
+    const targetCell = year === currentBeijingYear && todayCell
+      ? todayCell
+      : (state.heatmapCells.get(state.selectedDateKey) || null);
+    const shouldCenter = state.heatmapScrollYear !== year;
+    requestAnimationFrame(() => {
+      if (!scroll.isConnected || nodes.heatmap.querySelector('.heatmap-scroll') !== scroll) return;
+      if (shouldCenter) centerHeatCell(scroll, targetCell);
+      else if (previousScrollLeft !== null) scroll.scrollLeft = previousScrollLeft;
+      state.heatmapScrollYear = year;
+    });
   }
 
   // ---------- 历史渲染 ----------
@@ -669,6 +1042,12 @@
       nodes.trendChart.appendChild(createEmpty('—'));
       setHidden(nodes.historyWarnings, true);
       setHidden(nodes.retentionBanner, true);
+      setHidden(nodes.periodToggle, true);
+      setHidden(nodes.periodSection, true);
+      if (nodes.chartDetail) {
+        clear(nodes.chartDetail);
+        setHidden(nodes.chartDetail, true);
+      }
       nodes.ledgerFoot.textContent = '—';
       return;
     }
@@ -688,6 +1067,7 @@
 
     renderHistoryModels(summary.byModel || [], symbol);
     renderPeriods(data);
+    syncPeriodVisibility(data.granularity);
     renderTrendChart(data.periods || [], symbol, data.granularity);
     renderRetention(data);
 
@@ -826,6 +1206,8 @@
   nodes.heatPrevYear.addEventListener('click', () => {
     if (state.heatmapYear <= 2000) return;
     state.heatmapYear -= 1;
+    state.heatmapScrollYear = null;
+    state.selectedDateKey = null;
     persistState();
     requestHeatmap();
   });
@@ -833,8 +1215,83 @@
   nodes.heatNextYear.addEventListener('click', () => {
     if (state.heatmapYear >= currentBeijingYear) return;
     state.heatmapYear += 1;
+    state.heatmapScrollYear = null;
+    state.selectedDateKey = null;
     persistState();
     requestHeatmap();
+  });
+
+  nodes.heatToday.addEventListener('click', () => {
+    state.heatmapYear = currentBeijingYear;
+    state.selectedDateKey = todayBeijingKey();
+    state.heatmapScrollYear = null;
+    persistState();
+    requestHeatmap();
+  });
+
+  nodes.periodToggle.addEventListener('click', () => {
+    state.showPeriodList = !state.showPeriodList;
+    persistState();
+    syncPeriodVisibility(state.history && state.history.granularity);
+  });
+
+  nodes.emptyPeriodToggle.addEventListener('click', () => {
+    state.showEmptyPeriods = !state.showEmptyPeriods;
+    persistState();
+    if (state.history) renderPeriods(state.history);
+  });
+
+  nodes.trendChart.addEventListener('click', event => {
+    const hit = event.target.closest('.chart-hit');
+    if (!hit || !state.history) return;
+    const key = hit.getAttribute('data-period-key');
+    if (!key) return;
+    state.selectedPeriodKey = key;
+    persistState();
+    renderTrendChart(
+      state.history.periods || [],
+      state.history.currencySymbol || '¥',
+      state.history.granularity
+    );
+  });
+
+  nodes.heatmap.addEventListener('click', event => {
+    const cell = event.target.closest('.heat-cell[data-date]');
+    if (!cell || cell.disabled) return;
+    selectHeatDate(cell.dataset.date, false);
+  });
+
+  nodes.heatmap.addEventListener('keydown', event => {
+    const cell = event.target.closest('.heat-cell[data-date]');
+    if (!cell) return;
+    let nextKey = null;
+    switch (event.key) {
+      case 'ArrowLeft':
+        nextKey = shiftDayKey(cell.dataset.date, -1);
+        break;
+      case 'ArrowRight':
+        nextKey = shiftDayKey(cell.dataset.date, 1);
+        break;
+      case 'ArrowUp':
+        nextKey = shiftDayKey(cell.dataset.date, -7);
+        break;
+      case 'ArrowDown':
+        nextKey = shiftDayKey(cell.dataset.date, 7);
+        break;
+      case 'Home':
+        nextKey = `${state.heatmapYear}-01-01`;
+        break;
+      case 'End':
+        nextKey = state.heatmapYear === currentBeijingYear
+          ? todayBeijingKey()
+          : `${state.heatmapYear}-12-31`;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    const target = state.heatmapCells.get(nextKey);
+    if (target && !target.disabled) selectHeatDate(nextKey, true);
   });
 
   nodes.retentionClose.addEventListener('click', () => {
